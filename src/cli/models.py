@@ -104,3 +104,111 @@ class PhoneRecord(Renderable):
             f"[bold]Operator:[/bold] {self.operator}\n"
             f"[bold]Is Valid:[/bold] {'Yes' if self.is_valid else 'No'}\n"
         )
+
+@dataclasses.dataclass
+class EmailDomainRecord(Renderable):
+    email: str
+    domain: str
+    authenticity: str
+    mx_records: list[str] = dataclasses.field(default_factory=list)
+
+    def console_output(self) -> str:
+        return (
+            f"Email Domain Information for {self.email}:\n"
+            f"[bold]Domain:[/bold] {self.domain}\n"
+            f"[bold]Authenticity:[/bold] {self.authenticity}\n"
+            f"[bold]MX Records:[/bold]\n" + "\n".join(f" - {mx}" for mx in self.mx_records)
+        )
+
+@dataclasses.dataclass
+class ReverseDnsResult(Renderable):
+    ip_address: str
+    ptr_record: str
+
+    def console_output(self) -> str:
+        return (
+            f"Reverse DNS Lookup for {self.ip_address}:\n"
+            f"[bold]PTR Record:[/bold] {self.ptr_record}\n"
+        )
+
+
+@dataclasses.dataclass
+class EmailDomainAuth:
+    result: str | None = None
+    domain: str | None = None
+    aligned: bool | None = None
+
+    def console_output(self) -> str:
+        msg = ''
+        if self.result is not None:
+            msg += f"[bold]Result:[/bold] {self.result}\n"
+        if self.domain is not None:
+            msg += f"[bold]Domain:[/bold] {self.domain}\n"
+        if self.aligned is not None:
+            msg += f"[bold]Aligned:[/bold] {'Yes' if self.aligned else 'No'}\n"
+        return msg
+@dataclasses.dataclass
+class EmailAuthentication(Renderable):
+    spf: EmailDomainAuth = dataclasses.field(default_factory=EmailDomainAuth)
+    dkim: EmailDomainAuth = dataclasses.field(default_factory=EmailDomainAuth)
+    dmarc: str | None = None
+
+    def console_output(self) -> str:
+        return (
+            "Email Authentication Results:\n"
+            "[bold]SPF:[/bold]\n" + self.spf.console_output() +
+            "[bold]DKIM:[/bold]\n" + self.dkim.console_output() +
+            f"[bold]DMARC:[/bold] {self.dmarc}\n"
+        )
+
+
+@dataclasses.dataclass
+class RecievedIPs(Renderable):
+    ip_report: list[IpInfo] = dataclasses.field(default_factory=list)
+    errors: list[str] = dataclasses.field(default_factory=list)
+    ip_list: list[str] = dataclasses.field(default_factory=list)
+
+    def add_result(self, future_result: IpInfo | Exception | BaseException) -> None:
+        if isinstance(future_result, Exception):
+            self.errors.append(str(future_result))
+        else:
+            self.ip_report.append(future_result) # type: ignore
+
+    def console_output(self) -> str:
+        output = "Recieved IPs Information:\n"
+        if self.ip_report:
+            output += "[green]IP Details:[/green]\n"
+            for ip_info in self.ip_report:
+                output += ip_info.console_output() + "\n"
+        if self.errors:
+            output += "[red]Errors[/red]:\n"
+            for error in self.errors:
+                output += f" - {error}\n"
+        return output
+
+@dataclasses.dataclass
+class EmailHeaderRecord:
+    from_: str | None = None
+    to_: str | None = None
+    subject: str | None = None
+    date: str | None = None
+
+    auth_results: EmailAuthentication | None = None
+    reciever_ips: RecievedIPs = dataclasses.field(
+        default_factory=RecievedIPs
+    )
+
+    def console_output(self) -> str:
+        output = "Email Headers:\n"
+        if self.from_:
+            output += f"[bold]From:[/bold] {self.from_}\n"
+        if self.to_:
+            output += f"[bold]To:[/bold] {self.to_}\n"
+        if self.subject:
+            output += f"[bold]Subject:[/bold] {self.subject}\n"
+        if self.date:
+            output += f"[bold]Date:[/bold] {self.date}\n"
+        if self.auth_results:
+            output += self.auth_results.console_output()
+        output += self.reciever_ips.console_output()
+        return output
