@@ -64,11 +64,8 @@ class WebpageMetadata:
 
 
     def __init__(self, client: httpx.AsyncClient, url: str):
-        self.client = client
-        self.url = url
-        self.title: str | None = None
-        self.meta: dict[str, str] = {}
-
+        self.client: httpx.AsyncClient = client
+        self.url: str = url
 
     @async_retries(attempts=3, delay=0.5, backoff='expo', jitter=0.1)
     async def fetch(self) -> str:
@@ -82,8 +79,6 @@ class WebpageMetadata:
             if not script.get("src"):
                 scripts.append(script.string or script.get_text())
         return scripts
-
-
 
     async def __call__(self) -> WebsiteRecord:
         try:

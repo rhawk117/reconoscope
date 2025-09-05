@@ -13,7 +13,6 @@ from core.httpclient import HttpConnectionOptions, makeclient
 import httpx
 
 import multiprocessing as mp
-from typing import Optional, Iterable, Generator
 from tqdm import tqdm
 
 
@@ -159,7 +158,7 @@ class MultiprocessAccountProbe:
     def __init__(
         self,
         *,
-        options: Optional[HttpConnectionOptions] = None,
+        options: HttpConnectionOptions | None = None,
         concurrency: int = 100,
         head_first: bool = True,
     ) -> None:
@@ -300,7 +299,7 @@ class WhatsMyNameRule(TypedDict):
     e_code: int
     e_string: str
     m_string: str
-    # 
+    #
     m_code: int
     # Category
     cat: str

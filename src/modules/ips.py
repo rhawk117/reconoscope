@@ -30,6 +30,7 @@ class IPInfoCollector:
             k: v for k, v in ip_response.items()
             if k not in dataclasses.fields(IpRecord)
         }
+        
         return IpRecord(
             ip=ip_response.get("ip"),
             city=ip_response.get("city"),
