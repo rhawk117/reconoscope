@@ -3,7 +3,7 @@ from typing import Callable, Awaitable, Any, Literal
 import asyncio
 import random
 import httpx
-
+from loguru import logger
 
 class NoAttemptsLeftError(Exception): ...
 
@@ -43,6 +43,7 @@ class AsyncRetries:
             try:
                 return await func(*args, **kwargs)
             except self.retry_on as exc:
+                logger.error(f'Attempt {attempt_no} failed: {exc}')
                 last_exc = exc
                 if attempt_no == self.attempts:
                     raise NoAttemptsLeftError(

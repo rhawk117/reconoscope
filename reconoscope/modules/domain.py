@@ -12,12 +12,21 @@ from dns.rdata import Rdata
 import dns.resolver
 import email_validator
 import httpx
-from cli.domains import EmailDomainRecord
 from core.retries import async_retries
-from modules.models import DNSRecord, DnsBlocklistResult, DomainRecord, ReverseDnsResult, SubdomainResult
+from modules.models import (
+    DNSRecord,
+    DnsBlocklistResult,
+    DomainRecord,
+    ReverseDnsResult,
+    SubdomainResult,
+    EmailDomainRecord,
+)
 
 
 class AsyncDomainLookup:
+    """
+    Asynchronously looks up DNS records for a given domain.
+    """
     resolver = dns.asyncresolver.Resolver()
     RECORD_TYPES = (
         "A",
@@ -47,6 +56,14 @@ class AsyncDomainLookup:
             self.warnings.append(f"Error querying {rtype} record: {exc}")
 
     def add_mx_record(self, rdata: Rdata) -> None:
+        """
+        Adds an MX record to the records dictionary.
+
+        Parameters
+        ----------
+        rdata : Rdata
+            _The record to process_
+        """
         preference = getattr(rdata, "preference", None)
         exchange = getattr(rdata, "exchange", None)
         if exchange or preference:
@@ -54,6 +71,14 @@ class AsyncDomainLookup:
             self.records["MX"].append(record)
 
     async def __call__(self, rtype: str) -> None:
+        """
+        Looks up a specific DNS record type and stores the results.
+
+        Parameters
+        ----------
+        rtype : str
+            _The rtype to call with_
+        """
         async with self.collect_warnings(rtype):
             answer = await self.resolver.resolve(self.domain_name, rtype)
             for rdata in answer:
@@ -63,7 +88,18 @@ class AsyncDomainLookup:
                     self.records[rtype].append(rdata.to_text())
 
     @classmethod
-    async def lookup(cls, domain_name: str) -> DomainRecord:
+    async def run(cls, domain_name: str) -> DomainRecord:
+        """
+        Runs the DNS lookup for the specified domain name.
+
+        Parameters
+        ----------
+        domain_name : str
+
+        Returns
+        -------
+        DomainRecord
+        """
         lookup = cls(domain_name=domain_name)
         await asyncio.gather(
             *(lookup(rtype) for rtype in cls.RECORD_TYPES)
@@ -75,6 +111,9 @@ class AsyncDomainLookup:
         )
 
     def reset(self) -> None:
+        """
+        Resets the internal state of the instance.
+        """
         self.records = {rtype: [] for rtype in self.RECORD_TYPES}
         self.warnings.clear()
 
@@ -85,14 +124,24 @@ def normalize_hostname(hostname: str) -> str:
 
 
 class CertshSubdomainEnumerator:
+    """
+    Enumerates subdomains using the crt.sh
+    """
     CERTSH_URL: Final[str] = "https://crt.sh/"
 
     def __init__(self, domain: str, client: httpx.AsyncClient) -> None:
-        self.domain = domain
-        self.client = client
+        self.domain: str = domain
+        self.client: httpx.AsyncClient = client
 
     @async_retries(attempts=3, delay=0.5, jitter=0.1, backoff="expo")
     async def query(self) -> list[dict]:
+        """
+        Queries crt.sh for subdomains of the specified domain.
+
+        Returns
+        -------
+        list[dict]
+        """
         response = await self.client.get(
             url=self.CERTSH_URL,
             params={
@@ -104,12 +153,30 @@ class CertshSubdomainEnumerator:
         return response.json()
 
     def _iter_name_value(self, name_value: str):
+        """
+        Iterates over the name_value field from crt.sh results.
+
+        Parameters
+        ----------
+        name_value : str
+
+        Yields
+        ------
+        _str_
+        """
         for line in str(name_value).splitlines():
             hostname = normalize_hostname(line)
             if hostname and hostname != self.domain:
                 yield hostname
 
     def iter_query_result(self, result: list[dict]):
+        """
+        Iterates over the query result from crt.sh and yields subdomains.
+
+        Parameters
+        ----------
+        result : list[dict]
+        """
         for entry in result or []:
             if "name_value" in entry and (name_value := entry["name_value"]):
                 yield from self._iter_name_value(name_value)
@@ -130,7 +197,27 @@ class CertshSubdomainEnumerator:
             subdomains=sorted(found),
         )
 
+    @classmethod
+    async def run(cls, client: httpx.AsyncClient, domain: str) -> SubdomainResult:
+        """
+        Runs the subdomain enumeration for the specified domain.
+
+        Parameters
+        ----------
+        client : httpx.AsyncClient
+        domain : str
+
+        Returns
+        -------
+        SubdomainResult
+        """
+        enumerator = cls(domain=domain, client=client)
+        return await enumerator()
+
 class EmailDomainSearch:
+    """
+    Searches for MX records of the domain part of an email address.
+    """
     dns_resolver = dns.asyncresolver.Resolver()
 
     def get_email_domain(self, email: str) -> str | None:
@@ -202,7 +289,26 @@ class EmailDomainSearch:
             authenticity=authenticity_msg,
         )
 
+    @classmethod
+    async def run(cls, email: str) -> 'EmailDomainRecord':
+        '''
+        Runs the email domain search for the specified email address.
+
+        Parameters
+        ----------
+        email : str
+
+        Returns
+        -------
+        EmailDomainRecord
+        '''
+        searcher = cls(email=email)
+        return await searcher()
+
 class ReverseDnsLookup:
+    '''
+    Performs a reverse DNS lookup for a given IP address.
+    '''
     resolver = dns.asyncresolver.Resolver()
 
     def __init__(self, ip_address: str):
@@ -226,6 +332,12 @@ class ReverseDnsLookup:
             ptr_record=ptr_record,
         )
 
+    @classmethod
+    async def run(cls, ip_address: str) -> ReverseDnsResult | None:
+        reverse_dns_lookup = cls(ip_address=ip_address)
+        return await reverse_dns_lookup()
+
+
 
 class DnsBlocklistSearch:
     BLOCKLIST_DOMAINS = (
@@ -237,8 +349,8 @@ class DnsBlocklistSearch:
     resolver = dns.asyncresolver.Resolver()
 
     def __init__(self, ip_address: str, client: httpx.AsyncClient):
-        self.ip_address = ip_address
-        self.client = client
+        self.ip_address: str = ip_address
+        self.client: httpx.AsyncClient = client
         self.answers: dict[str, list[str]] = {}
 
     async def check_blocklist(
@@ -246,7 +358,14 @@ class DnsBlocklistSearch:
         blocklist_domain: str,
         reversed_ip: str,
     ) -> None:
+        '''
+        Checks if the reversed IP is listed in the given blocklist domain.
 
+        Parameters
+        ----------
+        blocklist_domain : str
+        reversed_ip : str
+        '''
         self.answers.setdefault(blocklist_domain, [])
 
         query = f"{reversed_ip}.{blocklist_domain}"
@@ -265,6 +384,14 @@ class DnsBlocklistSearch:
 
 
     async def __call__(self) -> DnsBlocklistResult:
+        '''
+        Queries the blocklist domains to check if the IP address
+        is listed.
+
+        Returns
+        -------
+        DnsBlocklistResult
+        '''
         reversed_ip = ".".join(reversed(self.ip_address.split(".")))
         tasks = [
             asyncio.create_task(self.check_blocklist(domain, reversed_ip))
@@ -276,3 +403,20 @@ class DnsBlocklistSearch:
             responses=self.answers,
             reverse_ip=reversed_ip,
         )
+
+    @classmethod
+    async def run(cls, client: httpx.AsyncClient, ip_address: str) -> DnsBlocklistResult:
+        '''
+        Runs the DNS blocklist search for the specified IP address.
+
+        Parameters
+        ----------
+        client : httpx.AsyncClient
+        ip_address : str
+
+        Returns
+        -------
+        DnsBlocklistResult
+        '''
+        searcher = cls(ip_address=ip_address, client=client)
+        return await searcher()

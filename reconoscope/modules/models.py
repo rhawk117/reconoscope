@@ -215,7 +215,7 @@ class RecievedIPs(Renderable):
         return output
 
 @dataclasses.dataclass
-class EmailHeaderRecord:
+class EmailHeaderRecord(Renderable):
     from_: str | None = None
     to_: str | None = None
     subject: str | None = None

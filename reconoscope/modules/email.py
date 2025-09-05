@@ -73,12 +73,6 @@ class EmailAuthParser:
             dmarc=dmarc,
         )
 
-    def dispose(self) -> None:
-        del self.spf_match_re
-        del self.spf_domain_match_re
-        del self.dkim_match_re
-        del self.dkim_domain_match_re
-        del self.dmarc_match_re
 
 
 class EmailHeaderAnalyzer:
@@ -116,13 +110,21 @@ class EmailHeaderAnalyzer:
             subject=self.email_message.get("Subject"),
             date=self.email_message.get("Date"),
         )
-        
+
         auth_results = self.email_message.get_all("Authentication-Results", [])
         from_ = self.email_message.get("From", "")
         parser = EmailAuthParser()
         email_auth = parser(auth_results=auth_results, from_=from_)
-        parser.dispose()
         record.auth_results = email_auth
         await self.add_reciever_ips(record)
 
         return record
+
+    @classmethod
+    async def run(cls, raw_header: str, client: httpx.AsyncClient) -> EmailHeaderRecord:
+        analyzer = cls(
+            client=client,
+            raw_header=raw_header
+        )
+        return await analyzer()
+

@@ -107,6 +107,11 @@ class WebpageMetadata:
             **meta,
         )
 
+    @classmethod
+    async def collect(cls, client: httpx.AsyncClient, url: str) -> WebsiteRecord:
+        instance = cls(client, url)
+        return await instance()
+
 class SslCertificateChecker:
     context = ssl.create_default_context()
 

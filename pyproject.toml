@@ -1,3 +1,8 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
 [project]
 name = "reconoscope"
 version = "0.1.0"
@@ -8,10 +13,19 @@ dependencies = [
     "beautifulsoup4>=4.13.5",
     "dnspython[async]>=2.7.0",
     "email-validator>=2.3.0",
-    "fastapi[all]>=0.116.1",
     "httpx[http2]>=0.28.1",
     "loguru>=0.7.3",
     "lxml>=6.0.1",
     "phonenumbers>=9.0.13",
+    "rich>=14.1.0",
     "tqdm>=4.67.1",
 ]
+
+[project.scripts]
+reconoscope = "reconoscope:main"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["reconoscope"]

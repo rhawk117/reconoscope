@@ -30,7 +30,7 @@ class IPInfoCollector:
             k: v for k, v in ip_response.items()
             if k not in dataclasses.fields(IpRecord)
         }
-        
+
         return IpRecord(
             ip=ip_response.get("ip"),
             city=ip_response.get("city"),
@@ -41,3 +41,8 @@ class IPInfoCollector:
             timezone=ip_response.get("timezone"),
             extras=extras,
         )
+
+    @classmethod
+    async def run(cls, client: httpx.AsyncClient, ip: str) -> IpRecord:
+        ip_info_collector = cls(client)
+        return await ip_info_collector(ip)

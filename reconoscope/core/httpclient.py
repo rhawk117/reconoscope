@@ -45,7 +45,8 @@ class HttpConnectionOptions:
             keepalive_expiry=self.keep_alive_expiry,
         )
 
-def makeclient(options: HttpConnectionOptions) -> httpx.AsyncClient:
+def makeclient(options: HttpConnectionOptions | None = None) -> httpx.AsyncClient:
+    options = options or HttpConnectionOptions()
     return httpx.AsyncClient(
         timeout=options.httpx_timeout,
         headers=options.headers,
