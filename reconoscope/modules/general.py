@@ -5,8 +5,8 @@ import phonenumbers
 from phonenumbers import geocoder
 from phonenumbers import carrier
 
-from core.retries import async_retries
-from modules.models import PhoneRecord, WebsiteRecord
+from reconoscope.core.retries import async_retries
+from reconoscope.modules.models import PhoneRecord, WebsiteRecord
 import bs4
 
 def get_phone_info(phone_number: str) -> PhoneRecord:

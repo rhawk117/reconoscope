@@ -1,4 +1,4 @@
-from reconoscope.cli import app
+from reconoscope import app
 
 if __name__ == "__main__":
     app.run()

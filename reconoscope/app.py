@@ -9,9 +9,9 @@ import sys
 from typing import TypeVar
 from rich.console import Console
 from loguru import logger
-from cli.internals import ArgparseModel, cli_arg, CLIGroup
-from core import httpclient
-from modules.models import Renderable
+from reconoscope.internals import ArgparseModel, cli_arg, CLIGroup
+from reconoscope.core import httpclient
+from reconoscope.modules.models import Renderable
 
 
 LOGURU_FORMAT = (
@@ -121,7 +121,7 @@ class DomainGroup(CLIGroup[DomainArgs]):
             yield client
 
     async def routine(self, args: DomainArgs) -> None:
-        from modules.domain import (
+        from reconoscope.modules.domain import (
             AsyncDomainLookup,
             CertshSubdomainEnumerator,
             DnsBlocklistSearch,
@@ -151,8 +151,8 @@ class IPGroup(CLIGroup[IPArgs]):
             yield client
 
     async def routine(self, args: IPArgs) -> None:
-        from modules.ips import IPInfoCollector
-        from modules.domain import ReverseDnsLookup
+        from reconoscope.modules.ips import IPInfoCollector
+        from reconoscope.modules.domain import ReverseDnsLookup
 
         async with self._client() as client:
             futures: list = [IPInfoCollector.run(client, args.ip)]
@@ -168,7 +168,7 @@ class EmailGroup(CLIGroup[EmailArgs]):
     model = EmailArgs
 
     async def run_header(self, header_text: str) -> Renderable:
-        from modules.email import EmailHeaderAnalyzer
+        from reconoscope.modules.email import EmailHeaderAnalyzer
 
         async with httpclient.makeclient() as client:
             return await EmailHeaderAnalyzer.run(
@@ -182,7 +182,7 @@ class EmailGroup(CLIGroup[EmailArgs]):
         if args.headers:
             result = await self.run_header(args.headers)
         else:
-            from modules.domain import EmailDomainSearch
+            from reconoscope.modules.domain import EmailDomainSearch
 
             result = await EmailDomainSearch.run(args.email)
 
@@ -206,8 +206,8 @@ class ProbeGroup(CLIGroup[HttpProbeArgs]):
         """)
 
     async def routine(self, args: HttpProbeArgs) -> None:
-        from modules.http_probe import MultiprocessAccountProbe
-        from core.utils import load_url_account_list
+        from reconoscope.modules.http_probe import MultiprocessAccountProbe
+        from reconoscope.core.utils import load_url_account_list
 
         urls = load_url_account_list(
             self.default_url_list,
@@ -233,7 +233,7 @@ class MiscGroup(CLIGroup[MiscArgs]):
             yield client
 
     async def routine(self, args: MiscArgs) -> None:
-        from modules.general import get_phone_info, WebpageMetadata
+        from reconoscope.modules.general import get_phone_info, WebpageMetadata
 
         if args.phone_number:
             result = get_phone_info(args.phone_number)

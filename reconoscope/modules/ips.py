@@ -4,8 +4,8 @@
 import dataclasses
 from typing import Final
 import httpx
-from core.retries import async_retries
-from modules.models import IpRecord
+from reconoscope.core.retries import async_retries
+from reconoscope.modules.models import IpRecord
 
 
 class IPInfoCollector:

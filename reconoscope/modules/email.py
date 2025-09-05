@@ -4,8 +4,8 @@ import re
 
 import httpx
 
-from modules.models import EmailAuthentication, EmailDomainAuth, EmailHeaderRecord, RecievedIPs
-from modules.ips import IPInfoCollector
+from reconoscope.modules.models import EmailAuthentication, EmailDomainAuth, EmailHeaderRecord, RecievedIPs
+from reconoscope.modules.ips import IPInfoCollector
 
 class EmailAuthParser:
     """

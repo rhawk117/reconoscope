@@ -12,8 +12,8 @@ from dns.rdata import Rdata
 import dns.resolver
 import email_validator
 import httpx
-from core.retries import async_retries
-from modules.models import (
+from reconoscope.core.retries import async_retries
+from reconoscope.modules.models import (
     DNSRecord,
     DnsBlocklistResult,
     DomainRecord,

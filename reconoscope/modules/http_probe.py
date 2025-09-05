@@ -8,8 +8,8 @@ from typing import Any, TypedDict
 from collections.abc import Generator, Iterable
 
 from pathlib import Path
-from core.retries import AsyncRetries, NoAttemptsLeftError
-from core.httpclient import HttpConnectionOptions, makeclient
+from reconoscope.core.retries import AsyncRetries, NoAttemptsLeftError
+from reconoscope.core.httpclient import HttpConnectionOptions, makeclient
 import httpx
 
 import multiprocessing as mp
