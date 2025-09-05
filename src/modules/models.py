@@ -240,3 +240,79 @@ class EmailHeaderRecord:
             output += self.auth_results.render()
         output += self.reciever_ips.render()
         return output
+
+
+@dataclasses.dataclass
+class DnsBlocklistResult(Renderable):
+    ip_address: str
+    reverse_ip: str
+    responses: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+
+    def render(self) -> str:
+        output = f"DNS Blocklist Results for {self.ip_address}:\n"
+        if not self.responses:
+            output += " - No listings found.\n"
+            return output
+
+        for bl, entries in self.responses.items():
+            output += f"[bold]{bl}:[/bold]\n"
+            for entry in entries:
+                output += f" - {entry}\n"
+
+        return output
+
+
+@dataclasses.dataclass
+class CDNScriptInfo(Renderable):
+    src: str
+    host: str
+    path: str
+    filename: str
+    async_: bool
+    defer: bool
+    integrity: str | None = None
+    crossorigin: str | None = None
+
+    def render(self) -> str:
+        output = f"CDN Script:\n - [bold]Source:[/bold] {self.src}\n"
+        output += f" - [bold]Host:[/bold] {self.host}\n"
+        output += f" - [bold]Path:[/bold] {self.path}\n"
+        output += f" - [bold]Filename:[/bold] {self.filename}\n"
+        output += f" - [bold]Async:[/bold] {'Yes' if self.async_ else 'No'}\n"
+        output += f" - [bold]Defer:[/bold] {'Yes' if self.defer else 'No'}\n"
+        if self.integrity:
+            output += f" - [bold]Integrity:[/bold] {self.integrity}\n"
+        if self.crossorigin:
+            output += f" - [bold]Crossorigin:[/bold] {self.crossorigin}\n"
+        return output
+
+
+@dataclasses.dataclass
+class WebsiteRecord(Renderable):
+    url: str
+    title: str | None = None
+    description: str | None = None
+    keywords: list[str] = dataclasses.field(default_factory=list)
+    robots: str | None = None
+    author: str | None = None
+    client_javascript: list[str] = dataclasses.field(default_factory=list)
+
+    def render(self) -> str:
+        output = f"Webpage Metadata for {self.url}:\n"
+        if self.title:
+            output += f"[bold]Title:[/bold] {self.title}\n"
+        if self.description:
+            output += f"[bold]Description:[/bold] {self.description}\n"
+        if self.keywords:
+            output += f"[bold]Keywords:[/bold] {', '.join(self.keywords)}\n"
+        if self.author:
+            output += f"[bold]Author:[/bold] {self.author}\n"
+        if self.robots:
+            output += f"[bold]Robots:[/bold] {self.robots}\n"
+        if self.client_javascript:
+            output += "[bold]Client-side JavaScript Files:[/bold]\n"
+            for js in self.client_javascript:
+                output += f" - {js}\n"
+
+
+        return output

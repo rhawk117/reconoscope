@@ -25,18 +25,19 @@ class AsyncRetries:
         httpx.NetworkError,
     )
 
-    def _calc_delay(self, attempt_no: int) -> float:
-        base = (
-            self.delay * attempt_no
-            if self.backoff == "linear"
-            else self.delay * (2 ** (attempt_no - 1))
-        )
+    def get_delay(self, attempt_no: int) -> float:
+        if self.backoff == 'linear':
+            base = self.delay * attempt_no
+        else:
+            base = self.delay * (2 ** (attempt_no - 1))
+
+
         if self.jitter:
             j = base * self.jitter
             base += random.uniform(-j, j)
         return max(0.0, base)
 
-    async def call(self, func: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
+    async def retry(self, func: Callable[..., Awaitable[Any]], *args, **kwargs) -> Any:
         last_exc: BaseException | None = None
         for attempt_no in range(1, self.attempts + 1):
             try:
@@ -47,12 +48,19 @@ class AsyncRetries:
                     raise NoAttemptsLeftError(
                         f"Failed after {self.attempts} attempts"
                     ) from exc
-                await asyncio.sleep(self._calc_delay(attempt_no))
+                await asyncio.sleep(self.get_delay(attempt_no))
             except Exception:
                 raise
         raise NoAttemptsLeftError(
             f"Failed after {self.attempts} attempts"
         ) from last_exc
+
+    def decorator(self, func: Callable[..., Awaitable[Any]]):
+        async def wrapper(*args, **kwargs) -> Any:
+            return await self.retry(func, *args, **kwargs)
+        return wrapper
+
+
 
 
 def async_retries(
@@ -62,7 +70,7 @@ def async_retries(
     jitter: float = 0.0,
     backoff: Literal['linear', 'expo'] = "linear",
     retry_on: tuple[type[BaseException], ...] | None = None,
-) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
+):
     if retry_on is None:
         retry_on = (
             httpx.ConnectError,
@@ -82,13 +90,5 @@ def async_retries(
         retry_on=retry_on,
     )
 
-    def decorator(
-        func: Callable[..., Awaitable[Any]]
-    ) -> Callable[..., Awaitable[Any]]:
-        async def wrapper(*args, **kwargs) -> Any:
-            return await retries.call(func, *args, **kwargs)
-        wrapper.__annotations__ = func.__annotations__
-        return wrapper
 
-
-    return decorator
+    return retries.decorator

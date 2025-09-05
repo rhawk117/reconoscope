@@ -108,7 +108,9 @@ class AccountProbeWorker:
     async def probe(self, *, url: str, query: dict | None = None) -> AccountProbeResult:
         try:
             async with self._semaphore:
-                return await self.retries.call(self._get_probe_result, url, query=query)
+                return await self.retries.retry(
+                    self._get_probe_result, url, query=query
+                )
         except NoAttemptsLeftError as exc:
             return AccountProbeResult(
                 url=url,
@@ -193,21 +195,6 @@ class MultiprocessAccountProbe:
         query: dict | None = None,
     ) -> list[AccountProbeResult]:
         results: list[AccountProbeResult] = []
-        for batch in self.stream(
-            urls, shards=shards, batch_size=batch_size, query=query
-        ):
-            results.extend(batch)
-        return results
-
-    def run_with_progress(
-        self,
-        urls: list[str],
-        *,
-        shards: int = 8,
-        batch_size: int = 100,
-        query: dict | None = None,
-    ) -> list[AccountProbeResult]:
-        results: list[AccountProbeResult] = []
         with tqdm(total=len(urls), desc="Probing", unit="url", ncols=90) as pbar:
             for batch in self.stream(
                 urls, shards=shards, batch_size=batch_size, query=query
@@ -264,7 +251,7 @@ CWD: {os.getcwd()}
 
     console.print(f"Starting probe with {prober.concurrency} concurrency...")
 
-    results = prober.run_with_progress(
+    results = prober.run(
         urls,
         shards=10,
         batch_size=20,
@@ -305,3 +292,15 @@ def main() -> None:
 #     GITHUB_URL = (
 #         "https://raw.githubusercontent.com/WebBreacher/WhatsMyName/main/wmn-data.json"
 #     )
+
+
+class WhatsMyNameRule(TypedDict):
+    name: str
+    uri_check: str
+    e_code: int
+    e_string: str
+    m_string: str
+    # 
+    m_code: int
+    # Category
+    cat: str

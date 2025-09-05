@@ -5,11 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.13.5",
     "dnspython[async]>=2.7.0",
     "email-validator>=2.3.0",
     "fastapi[all]>=0.116.1",
     "httpx[http2]>=0.28.1",
     "loguru>=0.7.3",
+    "lxml>=6.0.1",
     "phonenumbers>=9.0.13",
     "tqdm>=4.67.1",
 ]

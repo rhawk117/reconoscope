@@ -14,7 +14,7 @@ import email_validator
 import httpx
 from cli.domains import EmailDomainRecord
 from core.retries import async_retries
-from modules.models import DNSRecord, DomainRecord, ReverseDnsResult, SubdomainResult
+from modules.models import DNSRecord, DnsBlocklistResult, DomainRecord, ReverseDnsResult, SubdomainResult
 
 
 class AsyncDomainLookup:
@@ -224,4 +224,55 @@ class ReverseDnsLookup:
         return ReverseDnsResult(
             ip_address=self.ip_address,
             ptr_record=ptr_record,
+        )
+
+
+class DnsBlocklistSearch:
+    BLOCKLIST_DOMAINS = (
+        "zen.spamhaus.org",
+        "bl.spamcop.net",
+        "dnsbl.sorbs.net",
+        "b.barracudacentral.org",
+    )
+    resolver = dns.asyncresolver.Resolver()
+
+    def __init__(self, ip_address: str, client: httpx.AsyncClient):
+        self.ip_address = ip_address
+        self.client = client
+        self.answers: dict[str, list[str]] = {}
+
+    async def check_blocklist(
+        self,
+        blocklist_domain: str,
+        reversed_ip: str,
+    ) -> None:
+
+        self.answers.setdefault(blocklist_domain, [])
+
+        query = f"{reversed_ip}.{blocklist_domain}"
+        try:
+            answer = await self.resolver.resolve(query, "A")
+            for a in answer:
+                self.answers[blocklist_domain].append(str(a))
+        except (
+            dns.resolver.NXDOMAIN,
+            dns.resolver.NoAnswer,
+        ):
+            self.answers[blocklist_domain].append("Not listed")
+        except Exception as exc:
+            return self.answers[blocklist_domain].append(f"Error: {exc}")
+
+
+
+    async def __call__(self) -> DnsBlocklistResult:
+        reversed_ip = ".".join(reversed(self.ip_address.split(".")))
+        tasks = [
+            asyncio.create_task(self.check_blocklist(domain, reversed_ip))
+            for domain in self.BLOCKLIST_DOMAINS
+        ]
+        await asyncio.gather(*tasks)
+        return DnsBlocklistResult(
+            ip_address=self.ip_address,
+            responses=self.answers,
+            reverse_ip=reversed_ip,
         )
