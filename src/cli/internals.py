@@ -1,13 +1,9 @@
 
-import abc
 import argparse
 import dataclasses
 from typing import TypeVar
 
-class Renderable(abc.ABC):
-    @abc.abstractmethod
-    def console_output(self) -> str:
-        pass
+
 
 def cli_arg(
     name: str,

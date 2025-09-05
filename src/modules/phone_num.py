@@ -1,9 +1,12 @@
 
 
-import phonenumbers
-from phonenumbers import geocoder, carrier
 
-from cli.models import PhoneRecord
+import phonenumbers
+from phonenumbers import geocoder
+from phonenumbers import carrier
+
+from modules.models import PhoneRecord
+
 
 def get_phone_info(phone_number: str) -> PhoneRecord:
     try:
@@ -33,6 +36,3 @@ def get_phone_info(phone_number: str) -> PhoneRecord:
         is_valid=is_valid,
         **kwargs
     )
-
-
-

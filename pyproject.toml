@@ -6,7 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dnspython[async]>=2.7.0",
+    "email-validator>=2.3.0",
     "fastapi[all]>=0.116.1",
+    "httpx[http2]>=0.28.1",
     "loguru>=0.7.3",
     "phonenumbers>=9.0.13",
+    "tqdm>=4.67.1",
 ]
