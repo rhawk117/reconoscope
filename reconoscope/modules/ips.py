@@ -12,17 +12,17 @@ class IPInfoCollector:
     IP_INFO_URL: Final[str] = "https://ipinfo.io/{ip}/json"
 
     def __init__(self, client: httpx.AsyncClient):
-        self.client = client
+        self.client: httpx.AsyncClient = client
 
     @async_retries(attempts=3, delay=0.5, jitter=0.1, backoff="expo")
-    async def fetchone(self, ip: str) -> dict:
+    async def fetch(self, ip: str) -> dict:
         url = self.IP_INFO_URL.format(ip=ip)
         response = await self.client.get(url)
         response.raise_for_status()
         return response.json()
 
     async def __call__(self, ip: str) -> IpRecord:
-        ip_response = await self.fetchone(ip)
+        ip_response = await self.fetch(ip)
 
         if ip_response.get("bogon"):
             raise ValueError(f"IP {ip} is a bogon address")
