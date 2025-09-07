@@ -1,0 +1,19 @@
+
+line-length = 88
+indent-width = 4
+target-version = "py39"
+
+[lint]
+select = ["E", "F", "I"]
+ignore = ["D"]
+
+[format]
+quote-style = "single"
+skip-magic-trailing-comma = false
+indent-style = "space"
+line-ending = "auto"
+
+[lint.flake8-quotes]
+inline-quotes = "single"
+multiline-quotes = "single"
+docstring-quotes = "single"
