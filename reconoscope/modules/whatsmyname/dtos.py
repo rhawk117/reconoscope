@@ -5,9 +5,9 @@ The data transfer objects for WhatsMyName module.
 from __future__ import annotations
 
 import dataclasses as dc
-from typing import Literal, TypedDict
+from typing import Literal, TypeAlias, TypedDict
 
-
+WMNMethods = Literal["GET", "POST"]
 @dc.dataclass(slots=True)
 class WhatsMyNameOptions:
     '''
@@ -84,7 +84,7 @@ class WhatsMyNameSite:
     options: WhatsMyNameOptions
 
     @property
-    def method(self) -> Literal["GET", "POST"]:
+    def method(self) -> WMNMethods:
         return "POST" if self.options.post_body else "GET"
 
     def get_header(self, hdr_name: str) -> str | None:
@@ -102,8 +102,16 @@ class WhatsMyNameSite:
         return self.options.headers.get(hdr_name)
 
 
-
-
+@dc.dataclass(slots=True)
+class WMNRequestParts:
+    '''
+    A request to send built from a WhatsMyNameSite and account name.
+    '''
+    method: WMNMethods
+    url: str
+    headers: dict[str, str] = dc.field(default_factory=dict)
+    json_payload: dict | None = None
+    content_bytes: bytes | None = None
 
 
 
