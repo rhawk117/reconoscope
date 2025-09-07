@@ -12,7 +12,7 @@ from dns.rdata import Rdata
 import dns.resolver
 import email_validator
 import httpx
-from reconoscope.core.retries import async_retries
+from reconoscope.core.retries import httpx_retries
 from reconoscope.modules.models import (
     DNSRecord,
     DnsBlocklistResult,
@@ -21,6 +21,10 @@ from reconoscope.modules.models import (
     SubdomainResult,
     EmailDomainRecord,
 )
+
+class AsyncDomainResolver:
+    resolver: Final[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
+
 
 
 class AsyncDomainLookup:
@@ -133,7 +137,7 @@ class CertshSubdomainEnumerator:
         self.domain: str = domain
         self.client: httpx.AsyncClient = client
 
-    @async_retries(attempts=3, delay=0.5, jitter=0.1, backoff="expo")
+    @httpx_retries(attempts=3, delay=0.5, jitter=0.1, backoff="expo")
     async def query(self) -> list[dict]:
         """
         Queries crt.sh for subdomains of the specified domain.
