@@ -151,7 +151,7 @@ class IPGroup(CLIGroup[IPArgs]):
             yield client
 
     async def routine(self, args: IPArgs) -> None:
-        from reconoscope.modules.ips import IPInfoCollector
+        from reconoscope.modules.ip_search import IPInfoCollector
         from reconoscope.modules.domain import ReverseDnsLookup
 
         async with self._client() as client:

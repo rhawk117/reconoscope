@@ -9,7 +9,7 @@ from .general import (
     get_phone_info,
     WebpageMetadata
 )
-from .ips import IPInfoCollector
+from .ip_search import IPInfoCollector
 from .http_probe import MultiprocessAccountProbe
 from .email import EmailHeaderAnalyzer
 
