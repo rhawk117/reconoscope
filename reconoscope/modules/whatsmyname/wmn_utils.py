@@ -12,7 +12,7 @@ import logging
 import pprint
 from typing import Final, NamedTuple
 
-from reconoscope.core import httpclient
+from reconoscope.core import httpx
 from reconoscope.modules.whatsmyname.dtos import (
     WhatsMyNameEntry,
     WhatsMyNameOptions,
@@ -185,7 +185,12 @@ def _try_set_request_json(existing_parts: WMNRequestParts, body_string: str) -> 
         existing_parts.content_bytes = body_string.encode('utf-8')
 
 
-def get_request_parts(*, site: WhatsMyNameSite, account: str) -> WMNRequestParts:
+def get_request_parts(
+    *,
+    site: WhatsMyNameSite,
+    account: str,
+    base_headers: dict[str, str],
+) -> WMNRequestParts:
     """
     Get the request parts for the given site and account name.
 
@@ -201,13 +206,17 @@ def get_request_parts(*, site: WhatsMyNameSite, account: str) -> WMNRequestParts
     """
     method = site.method
     site_url = get_site_url(site, account)
-    site_headers = site.options.headers
+
+    merged = dict(base_headers)
+    if site.options.headers:
+        merged.update(site.options.headers)
 
     parts = WMNRequestParts(
         method=method,
         url=site_url,
-        headers=site_headers,
+        headers=merged,
     )
+
 
     if method == 'GET':
         return parts
@@ -220,30 +229,6 @@ def get_request_parts(*, site: WhatsMyNameSite, account: str) -> WMNRequestParts
     _try_set_request_json(parts, body_string)
     return parts
 
-
-async def test_wnm_site() -> None:
-    url = "https://raw.githubusercontent.com/WebBreacher/WhatsMyName/main/wmn-data.json"
-    async with httpclient.create_httpx_client() as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        raw: WMNRoot = resp.json()
-
-    sites_raw = raw.get("sites", []) or []
-    for s in sites_raw:
-        wmn, error = WhatsMyNameSite.try_load_json(s)
-        if error:
-            input(f"Error loading site: {error}")
-            continue
-        assert wmn is not None
-        try:
-            pprint.pprint(wmn.request("exampleuser"))
-        except Exception as e:
-            input(f"Error printing site: {e}")
-            pprint.pprint(wmn)
-            continue
-        input("----------------------")
-
-    print(f"Total sites loaded: {len(sites_raw)}")
 
 
 async def _example() -> None:

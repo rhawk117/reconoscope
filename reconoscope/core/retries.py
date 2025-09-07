@@ -1,12 +1,13 @@
 from __future__ import annotations
-from dataclasses import dataclass
-import functools
-from typing import Literal, ParamSpec, TypeVar
+
 import asyncio
+import functools
 import random
-import httpx
-from loguru import logger
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from typing import Literal, ParamSpec, TypeVar
+
+from loguru import logger
 
 
 class NoAttemptsLeftError(Exception): ...
@@ -128,19 +129,3 @@ class AsyncRetries:
         return wrapper
 
 
-httpx_retries = AsyncRetries(
-    attempts=3,
-    delay=0.5,
-    jitter=0.1,
-    backoff="expo",
-    retry_on=(
-        httpx.ConnectError,
-        httpx.ReadTimeout,
-        httpx.WriteError,
-        httpx.RemoteProtocolError,
-        httpx.PoolTimeout,
-        httpx.ProxyError,
-        httpx.NetworkError,
-        httpx.HTTPStatusError,
-    ),
-)

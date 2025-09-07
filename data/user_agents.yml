@@ -1,0 +1,37 @@
+versions:
+  chrome: '118.0.0.0'
+  firefox: '118.0'
+  webkit: '537.36'
+  webkit_safari: '605.1.15'
+  gecko: '109.0'
+  ios_build: '15E148'
+
+os:
+  windows: 'Windows NT 10.0; Win64; x64'
+  mac: 'Macintosh; Intel Mac OS X 10_15_7'
+  linux: 'X11; Linux x86_64'
+  android: 'Linux; Android 13; SM-G991B'
+  ios: 'iPhone; CPU iPhone OS 17_0 like Mac OS X'
+
+templates:
+  chrome_desktop: 'Mozilla/5.0 ({os}) AppleWebKit/{webkit} (KHTML, like Gecko) Chrome/{chrome_version} Safari/{webkit}'
+  chrome_mobile: 'Mozilla/5.0 ({os}) AppleWebKit/{webkit} (KHTML, like Gecko) Chrome/{chrome_version} Mobile Safari/{webkit}'
+  chrome_ios: 'Mozilla/5.0 ({os}) AppleWebKit/{webkit_safari} (KHTML, like Gecko) CriOS/{chrome_version} Mobile/{ios_build} Safari/604.1'
+
+  firefox_desktop: 'Mozilla/5.0 ({os}; rv:{gecko}) Gecko/20100101 Firefox/{firefox_version}'
+  firefox_mobile: 'Mozilla/5.0 (Mobile; rv:{gecko}) Gecko/{firefox_version} Firefox/{firefox_version}'
+  firefox_ios: 'Mozilla/5.0 ({os}) AppleWebKit/{webkit_safari} (KHTML, like Gecko) FxiOS/{firefox_version} Mobile/{ios_build} Safari/{webkit_safari}'
+
+matrix:
+  chrome:
+    windows: chrome_desktop
+    mac: chrome_desktop
+    linux: chrome_desktop
+    android: chrome_mobile
+    ios: chrome_ios
+  firefox:
+    windows: firefox_desktop
+    mac: firefox_desktop
+    linux: firefox_desktop
+    android: firefox_mobile
+    ios: firefox_ios

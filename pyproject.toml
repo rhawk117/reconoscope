@@ -16,7 +16,9 @@ dependencies = [
     "httpx[http2]>=0.28.1",
     "loguru>=0.7.3",
     "lxml>=6.0.1",
+    "msgspec>=0.19.0",
     "phonenumbers>=9.0.13",
+    "pyyaml>=6.0.2",
     "rich>=14.1.0",
     "tqdm>=4.67.1",
 ]

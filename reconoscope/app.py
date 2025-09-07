@@ -10,7 +10,7 @@ from typing import TypeVar
 from rich.console import Console
 from loguru import logger
 from reconoscope.internals import ArgparseModel, cli_arg, CLIGroup
-from reconoscope.core import httpclient
+from reconoscope.core import httpx
 from reconoscope.modules.models import Renderable
 
 
@@ -117,7 +117,7 @@ class DomainGroup(CLIGroup[DomainArgs]):
 
     @asynccontextmanager
     async def _client(self):
-        async with httpclient.makeclient() as client:
+        async with httpx.makeclient() as client:
             yield client
 
     async def routine(self, args: DomainArgs) -> None:
@@ -147,7 +147,7 @@ class IPGroup(CLIGroup[IPArgs]):
 
     @asynccontextmanager
     async def _client(self):
-        async with httpclient.makeclient() as client:
+        async with httpx.makeclient() as client:
             yield client
 
     async def routine(self, args: IPArgs) -> None:
@@ -170,7 +170,7 @@ class EmailGroup(CLIGroup[EmailArgs]):
     async def run_header(self, header_text: str) -> Renderable:
         from reconoscope.modules.email import EmailHeaderAnalyzer
 
-        async with httpclient.makeclient() as client:
+        async with httpx.makeclient() as client:
             return await EmailHeaderAnalyzer.run(
                 raw_header=header_text,
                 client=client,
@@ -229,7 +229,7 @@ class MiscGroup(CLIGroup[MiscArgs]):
 
     @asynccontextmanager
     async def _client(self):
-        async with httpclient.makeclient() as client:
+        async with httpx.makeclient() as client:
             yield client
 
     async def routine(self, args: MiscArgs) -> None:

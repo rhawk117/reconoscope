@@ -5,7 +5,9 @@ The data transfer objects for WhatsMyName module.
 from __future__ import annotations
 
 import dataclasses as dc
-from typing import Literal, TypeAlias, TypedDict
+from typing import Literal, TypedDict
+
+import httpx
 
 WMNMethods = Literal["GET", "POST"]
 @dc.dataclass(slots=True)
@@ -112,6 +114,30 @@ class WMNRequestParts:
     headers: dict[str, str] = dc.field(default_factory=dict)
     json_payload: dict | None = None
     content_bytes: bytes | None = None
+
+    def stream(self, client: httpx.AsyncClient):
+
+        if self.method == "GET":
+            return client.stream(
+                method=self.method,
+                url=self.url,
+                headers=self.headers,
+            )
+
+        if self.json_payload is not None:
+            return client.stream(
+                method=self.method,
+                url=self.url,
+                headers=self.headers,
+                json=self.json_payload,
+            )
+
+        return client.stream(
+            method=self.method,
+            url=self.url,
+            headers=self.headers,
+            content=self.content_bytes,
+        )
 
 
 
