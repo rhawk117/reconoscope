@@ -1,12 +1,16 @@
 
 
-
+import sys
+from rich.console import Console
 import asyncio
 import dataclasses
-from typing import Final
-import httpx
-from reconoscope.core.retries import httpx_retries
 import dataclasses as dc
+from typing import Final
+
+import httpx
+
+from reconoscope.core.httpx import httpxretry, make_httpx_client
+
 
 @dc.dataclass(slots=True)
 class IpRecord:
@@ -36,7 +40,7 @@ class IPAddressSearch:
     def __init__(self, client: httpx.AsyncClient) -> None:
         self.client: httpx.AsyncClient = client
 
-    @httpx_retries
+    @httpxretry()
     async def fetch(self, ip: str) -> dict:
         '''
         Fetches raw JSON IP information from ipinfo.io.
@@ -147,3 +151,53 @@ async def lookup_all_ips(
     '''
     searcher = IPAddressSearch(client=client)
     return await searcher.search_ips(ips)
+
+
+def render_results(results: list[IpRecord]) -> str:
+    lines = []
+    for result in results:
+        lines.append(f"[bold yellow]IP:[/][bold] {result.ip or 'n/a'}[/]")
+        if result.city:
+            lines.append(f"[cyan]City:[/][green] {result.city}[/]")
+        if result.country:
+            lines.append(f"[cyan]Country:[/][green] {result.country}[/]")
+        if result.postal:
+            lines.append(f"[cyan]Postal:[/][green] {result.postal}[/]")
+        if result.org:
+            lines.append(f"[cyan]Org:[/][green] {result.org}[/]")
+        if result.location:
+            lines.append(f"[cyan]Location:[/][green] {result.location}[/]")
+            maps_link = result.maps_link
+            if maps_link:
+                lines.append(f"[blue underline] {maps_link}[/]")
+        if result.timezone:
+            lines.append(f"[cyan]Timezone:[/][green] {result.timezone}[/]")
+        if result.extras:
+            lines.append("[magenta]Extras:[/]")
+            for k, v in result.extras.items():
+                lines.append(f"  [magenta]{k}[/]: [green]{v}[/]")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+def auto_run() -> None:
+    console = Console()
+
+    if len(sys.argv) < 2:
+        ip = console.input("[bold yellow]Enter an IP address to look up:[/] ")
+    else:
+        ip = sys.argv[1]
+
+    async def main() -> None:
+        async with make_httpx_client() as client:
+            try:
+                result = await lookup_ip(client=client, ip=ip)
+                console.print(render_results([result]))
+            except ValueError as ve:
+                console.print(f"[bold red]Error:[/] {ve}")
+            except httpx.HTTPError as he:
+                console.print(f"[bold red]HTTP Error:[/] {he}")
+
+    asyncio.run(main())
+
+if __name__ == "__main__":
+    auto_run()

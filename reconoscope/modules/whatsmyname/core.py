@@ -65,7 +65,9 @@ async def fetch_one(
     positive_id = site.entry.e_string or ''
 
     request_template = WmnSiteUtils.get_request_parts(
-        site=site, account=username, base_headers=base_headers
+        site=site,
+        account=username,
+        base_headers=base_headers
     )
 
     async with request_template.stream(client) as response:
@@ -264,6 +266,7 @@ async def check_whatsmyusername_multiprocess(
                 if not hits:
                     logger.warning('No hits found in chunk.')
                     continue
+
                 all_hits.extend(hits)
             except Exception as exc:
                 logger.error(f'Error in process pool worker: {exc}')
