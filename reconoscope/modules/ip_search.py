@@ -1,13 +1,13 @@
 
 
-import sys
-from rich.console import Console
 import asyncio
 import dataclasses
 import dataclasses as dc
+import sys
 from typing import Final
 
 import httpx
+from rich.console import Console
 
 from reconoscope.core.httpx import httpxretry, make_httpx_client
 

@@ -96,7 +96,9 @@ class CersthSubdomainSearch:
             subdomains.add(subdomain)
 
         return SubdomainResult(
-            domain=domain, total=len(subdomains), subdomains=subdomains
+            domain=domain,
+            total=len(subdomains),
+            subdomains=sorted(subdomains),
         )
 
 
