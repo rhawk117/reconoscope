@@ -139,7 +139,3 @@ class WMNRequestParts:
             content=self.content_bytes,
         )
 
-
-
-
-# url: "https://raw.githubusercontent.com/WebBreacher/WhatsMyName/main/wmn-data.json"

@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
 import contextlib
 import dataclasses as dc
-from typing import Coroutine, Self, cast
+import sys
 import warnings
+from collections.abc import AsyncIterator
+from typing import Coroutine, Self, cast
+
 import dns.asyncresolver
 import dns.rdatatype
 import dns.resolver
 import dns.reversename
 import email_validator
-from reconoscope.modules.dns_search.records import DomainRecords, MXRecord, PTRRecord
+from rich.console import Console
+
 from reconoscope.modules.dns_search import parser
+from reconoscope.modules.dns_search.records import DomainRecords, MXRecord, PTRRecord
+
 
 @dc.dataclass(slots=True)
 class DnsSearchResult:
@@ -91,7 +96,7 @@ class _DnsQueryWorker:
     ) -> AsyncIterator[object]:
         response = await self.resolve_rtype(rtype, config)
         for rdata in response:
-            yield parser.parse_rdata(rdata)
+            yield parser.parse_rdata(rdata, response)
 
 @dc.dataclass(slots=True)
 class DnsQuery:
@@ -370,7 +375,7 @@ async def email_dns_lookup(
         dns.rdatatype.MX,
         options
     ):
-            mx_records.append(cast(MXRecord, mx_record))
+        mx_records.append(cast(MXRecord, mx_record))
 
     is_authentic = bool(mx_records)
 
@@ -404,3 +409,129 @@ def create_dns_query(
         domain_name=domain_name,
         config=config,
     )
+
+
+def render_record(record: object | dict) -> str:
+    message = ''
+    if dc.is_dataclass(record):
+        items = dc.asdict(record).items()
+    else:
+        items = record.items()  # type: ignore
+    for key, value in items:  # type: ignore
+        if key == 'ttl':
+            continue
+        message += f'[bold]{key}[/bold]: [italic green]{value}[/italic green]\n'
+    return message
+
+
+def stringify_results(result: DnsSearchResult) -> str:
+    message = (
+        f'[bold underline]DNS Lookup Results for {result.domain}[/bold underline]\n'
+        f'[bold]Queried Record Types:[/bold] {", ".join(result.rtypes_queried)}\n'
+        f'[bold]Warnings:[/bold] {", ".join(result.warnings) if result.warnings else "None"}\n'
+    )
+    for rtype, records in dc.asdict(result.records).items():
+        if records:
+            message += f'\n[bold underline]{rtype} Records:[/bold underline]\n'
+            for record in records:
+                message += render_record(record)
+        else:
+            message += f'\n[bold underline]{rtype} Records:[/bold underline] None\n'
+
+    return message
+
+
+def result_table(results: dict[str, DnsSearchResult]) -> None:
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title='DNS Lookup Results')
+    table.add_column('Domain', style='cyan', no_wrap=True)
+    table.add_column('Record Type', style='magenta')
+    table.add_column('Records', style='green')
+    table.add_column('Warnings', style='red')
+
+    for domain, result in results.items():
+        record_summaries = []
+        for rtype, records in dc.asdict(result.records).items():
+            if records:
+                record_summaries.append(f'{rtype}: {len(records)}')
+        record_summary = (
+            '\n'.join(record_summaries) if record_summaries else 'No records found'
+        )
+        warnings_summary = '\n'.join(result.warnings) if result.warnings else 'None'
+        table.add_row(
+            domain, ', '.join(result.rtypes_queried), record_summary, warnings_summary
+        )
+
+    console.print(table)
+
+
+def auto_run_dns() -> None:
+    console = Console()
+
+    if len(sys.argv) > 1:
+        domain = sys.argv[1]
+    else:
+        domain = console.input('Enter a domain name to look up: ')
+
+    results = asyncio.run(fetch_dns_records(domain_name=domain, options=DnsConfig()))
+    console.print(stringify_results(results))
+
+    console.print('\n[bold underline]Summary Table[/bold underline]\n')
+    result_table({results.domain: results})
+
+
+def auto_run_email() -> None:
+    console = Console()
+
+    if len(sys.argv) > 1:
+        email = sys.argv[1]
+    else:
+        email = console.input('Enter an email address to look up: ')
+
+    result = asyncio.run(email_dns_lookup(email_address=email, options=DnsConfig()))
+
+    console.print(
+        f'[bold underline]Email DNS Lookup Results for {result.email}[/bold underline]'
+    )
+    console.print(f'[bold]Domain:[/bold] {result.domain}')
+    console.print(
+        f'[bold]Is Authentic:[/bold] {"Yes" if result.is_authentic else "No"}'
+    )
+    if result.warnings:
+        console.print(f'[bold]Warnings:[/bold] {", ".join(result.warnings)}')
+    if result.records:
+        console.print('[bold underline]MX Records:[/bold underline]')
+        for record in result.records:
+            console.print(render_record(record))
+    else:
+        console.print('[bold underline]MX Records:[/bold underline] None')
+
+
+def auto_reversename() -> None:
+    console = Console()
+
+    if len(sys.argv) > 1:
+        ip_address = sys.argv[1]
+    else:
+        ip_address = console.input('Enter an IP address to look up: ')
+
+    try:
+        ptr_records = asyncio.run(
+            reversename_lookup(ip_address=ip_address, options=DnsConfig())
+        )
+        console.print(
+            f'[bold underline]Reverse DNS Lookup Results for {ip_address}[/bold underline]'
+        )
+        if ptr_records:
+            for record in ptr_records:
+                console.print(render_record(record))
+        else:
+            console.print('No PTR records found.')
+    except ValueError as e:
+        console.print(f'[red]Error:[/red] {e}')
+
+
+if __name__ == '__main__':
+    auto_run_dns()

@@ -92,7 +92,6 @@ class AsyncRetries:
             try:
                 return await func(*args, **kwargs)
             except self.retry_on as exc:
-                logger.error(f"Attempt {attempt_no} failed: {exc}")
                 if attempt_no == self.attempts:
                     raise NoAttemptsLeftError(
                         f"Failed after {self.attempts} attempts"
