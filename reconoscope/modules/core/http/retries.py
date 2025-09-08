@@ -68,7 +68,8 @@ class AsyncRetries:
         return max(0.0, base)
 
     async def call_with_retries(
-        self, func: Callable[P, Awaitable[R]], *args, **kwargs
+        self,
+        func: Callable[P, Awaitable[R]], *args, **kwargs
     ) -> R:
         """
         Calls a function with retries
@@ -86,12 +87,15 @@ class AsyncRetries:
         ------
         NoAttemptsLeftError
         """
-
         last_exc: BaseException | None = None
         for attempt_no in range(1, self.attempts + 1):
             try:
                 return await func(*args, **kwargs)
             except self.retry_on as exc:
+                logger.warning(
+                    f"Attempt {attempt_no} failed with {exc.__class__.__name__}: {exc}. "
+                    f"Retrying in {self._calculate_delay(attempt_no):.2f} seconds..."
+                )
                 if attempt_no == self.attempts:
                     raise NoAttemptsLeftError(
                         f"Failed after {self.attempts} attempts"

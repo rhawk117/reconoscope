@@ -207,7 +207,7 @@ class ProbeGroup(CLIGroup[HttpProbeArgs]):
 
     async def routine(self, args: HttpProbeArgs) -> None:
         from reconoscope.modules.http_probe import MultiprocessAccountProbe
-        from reconoscope.core.utils import load_url_account_list
+        from reconoscope.modules.core.utils import load_url_account_list
 
         urls = load_url_account_list(
             self.default_url_list,

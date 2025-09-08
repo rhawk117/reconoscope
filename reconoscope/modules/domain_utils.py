@@ -45,7 +45,8 @@ class CersthSubdomainSearch:
         response.raise_for_status()
         return response.json()
 
-    def iter_query_result(self, result: list[dict], domain: str):
+
+    def walk_response(self, result: list[dict], domain: str):
         """
         Iterates over the query result from crt.sh and yields subdomains.
 
@@ -92,7 +93,7 @@ class CersthSubdomainSearch:
         """
         raw_result = await self.query(domain)
         subdomains = set()
-        for subdomain in self.iter_query_result(raw_result, domain):
+        for subdomain in self.walk_response(raw_result, domain):
             subdomains.add(subdomain)
 
         return SubdomainResult(

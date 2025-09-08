@@ -1,9 +1,9 @@
 import asyncio
-import phonenumbers
-from phonenumbers import geocoder
-from phonenumbers import carrier
-
 import dataclasses as dc
+
+import phonenumbers
+from phonenumbers import carrier, geocoder
+
 
 @dc.dataclass
 class PhoneRecord:
@@ -24,24 +24,22 @@ def get_phone_info(phone_number: str) -> PhoneRecord:
     except phonenumbers.NumberParseException as exc:
         raise ValueError(f"Error parsing phone number {phone_number}: {exc}")
 
-    if is_valid := phonenumbers.is_valid_number(phone_obj):
-        kwargs = {
-            "e164": phonenumbers.format_number(
-                phone_obj, phonenumbers.PhoneNumberFormat.E164
-            ),
-            "country": geocoder.country_name_for_number(phone_obj, "en"),
-            "region": geocoder.description_for_number(phone_obj, "en"),
-            "operator": carrier.name_for_number(phone_obj, "en"),
-        }
-    else:
-        kwargs = {
-            "e164": None,
-            "country": None,
-            "region": None,
-            "operator": None,
-        }
+    if not (is_valid := phonenumbers.is_valid_number(phone_obj)):
+        return PhoneRecord(phone_number=phone_number, is_valid=False)
 
-    return PhoneRecord(phone_number=phone_number, is_valid=is_valid, **kwargs)
+    e164 = phonenumbers.format_number(phone_obj, phonenumbers.PhoneNumberFormat.E164)
+    country = geocoder.country_name_for_number(phone_obj, 'en')
+    region = geocoder.description_for_number(phone_obj, 'en')
+    operator_name = carrier.name_for_number(phone_obj, 'en')
+
+    return PhoneRecord(
+        phone_number=phone_number,
+        is_valid=is_valid,
+        e164=e164,
+        country=country,
+        region=region,
+        operator=operator_name,
+    )
 
 
 async def lookup_phone_numbers(phone_numbers: list[str]) -> list[PhoneRecord]:

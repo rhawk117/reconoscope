@@ -275,7 +275,7 @@ class WMNLoaders:
         ValueError
             If the file is not valid JSON or does not conform to the schema.
         """
-        from reconoscope.core import fs_utils
+        from reconoscope.modules.core import fs_utils
 
         json_string = fs_utils.read_text(pathname, join_to_root=True)
 

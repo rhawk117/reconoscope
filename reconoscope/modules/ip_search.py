@@ -1,7 +1,6 @@
 
 
 import asyncio
-import dataclasses
 import dataclasses as dc
 import sys
 from typing import Final
@@ -15,9 +14,8 @@ from reconoscope.core.httpx import httpxretry, make_httpx_client
 @dc.dataclass(slots=True)
 class IpRecord:
     """
-    The results from an IP address lookup.
+    The parsed ip information record.
     """
-
     ip: str | None = None
     city: str | None = None
     country: str | None = None
@@ -25,7 +23,7 @@ class IpRecord:
     org: str | None = None
     location: str | None = None
     timezone: str | None = None
-    extras: dict = dataclasses.field(default_factory=dict)
+    extras: dict = dc.field(default_factory=dict)
 
     @property
     def maps_link(self) -> str | None:
@@ -34,14 +32,16 @@ class IpRecord:
         return f"https://maps.google.com/?q={self.location}"
 
 
-class IPAddressSearch:
+class IpIsBogonError(ValueError): ...
+
+class IPSearchEngine:
     IP_INFO_URL: Final[str] = "https://ipinfo.io/{ip}/json"
 
     def __init__(self, client: httpx.AsyncClient) -> None:
         self.client: httpx.AsyncClient = client
 
     @httpxretry()
-    async def fetch(self, ip: str) -> dict:
+    async def fetch_ip_info(self, ip: str) -> dict:
         '''
         Fetches raw JSON IP information from ipinfo.io.
 
@@ -59,7 +59,7 @@ class IPAddressSearch:
         return response.json()
 
     async def search(self, ip: str) -> IpRecord:
-        '''
+        """
         Look up information about an IP address.
 
         Parameters
@@ -72,27 +72,22 @@ class IPAddressSearch:
 
         Raises
         ------
-        ValueError
-            _If the IP address is a bogon address_
-        '''
-        ip_response = await self.fetch(ip)
+        IpIsBogonError
+        """
+        ip_response = await self.fetch_ip_info(ip)
 
         if ip_response.get("bogon"):
-            raise ValueError(f"IP {ip} is a bogon address")
-        extras = {
-            k: v for k, v in ip_response.items()
-            if k not in dataclasses.fields(IpRecord)
-        }
+            raise IpIsBogonError(f"IP {ip} is a bogon address")
+
+        record_kwargs = {}
+        for fields in dc.fields(IpRecord):
+            # remove all till we have only extras left
+            if record_field := ip_response.pop(fields.name, None):
+                record_kwargs[fields.name] = record_field
 
         return IpRecord(
-            ip=ip_response.get("ip"),
-            city=ip_response.get("city"),
-            country=ip_response.get("country"),
-            postal=ip_response.get("postal"),
-            org=ip_response.get("org"),
-            location=ip_response.get("loc"),
-            timezone=ip_response.get("timezone"),
-            extras=extras,
+            **record_kwargs,
+            extras=ip_response,
         )
 
     async def search_ips(self, ips: list[str]) -> list[IpRecord]:
@@ -101,8 +96,8 @@ class IPAddressSearch:
 
 
 async def lookup_ip(
-    client: httpx.AsyncClient,
     ip: str,
+    client: httpx.AsyncClient,
 ) -> IpRecord:
     '''
     Look up information about an IP address.
@@ -123,7 +118,7 @@ async def lookup_ip(
     ValueError
         _If the IP address is a bogon address_
     '''
-    searcher = IPAddressSearch(client=client)
+    searcher = IPSearchEngine(client=client)
     return await searcher.search(ip)
 
 async def lookup_all_ips(
@@ -149,35 +144,25 @@ async def lookup_all_ips(
     ValueError
         _If any of the IP addresses is a bogon address_
     '''
-    searcher = IPAddressSearch(client=client)
+    searcher = IPSearchEngine(client=client)
     return await searcher.search_ips(ips)
 
 
-def render_results(results: list[IpRecord]) -> str:
-    lines = []
-    for result in results:
-        lines.append(f"[bold yellow]IP:[/][bold] {result.ip or 'n/a'}[/]")
-        if result.city:
-            lines.append(f"[cyan]City:[/][green] {result.city}[/]")
-        if result.country:
-            lines.append(f"[cyan]Country:[/][green] {result.country}[/]")
-        if result.postal:
-            lines.append(f"[cyan]Postal:[/][green] {result.postal}[/]")
-        if result.org:
-            lines.append(f"[cyan]Org:[/][green] {result.org}[/]")
-        if result.location:
-            lines.append(f"[cyan]Location:[/][green] {result.location}[/]")
-            maps_link = result.maps_link
-            if maps_link:
-                lines.append(f"[blue underline] {maps_link}[/]")
-        if result.timezone:
-            lines.append(f"[cyan]Timezone:[/][green] {result.timezone}[/]")
-        if result.extras:
-            lines.append("[magenta]Extras:[/]")
-            for k, v in result.extras.items():
-                lines.append(f"  [magenta]{k}[/]: [green]{v}[/]")
-        lines.append("")
-    return "\n".join(lines).strip()
+def render_ip_record(record: IpRecord) -> str:
+    result_dict = dc.asdict(record)
+    result_lines = []
+    for k, v in result_dict.items():
+        result_lines.append(f'[green]{k.capitalize()}:[/] [green]{v or "n/a"}[/]')
+        if k == 'extras':
+            for ek, ev in record.extras.items():
+                result_lines.append(f'  [magenta]{ek}:[/][green] {ev or "n/a"}[/]')
+
+    if maps_link := record.maps_link:
+        result_lines.append(
+            f'[green]Google Maps Link:[/] [green underline]{maps_link}[/]'
+        )
+
+    return '\n'.join(result_lines)
 
 def auto_run() -> None:
     console = Console()
@@ -191,7 +176,7 @@ def auto_run() -> None:
         async with make_httpx_client() as client:
             try:
                 result = await lookup_ip(client=client, ip=ip)
-                console.print(render_results([result]))
+                console.print(render_ip_record(result))
             except ValueError as ve:
                 console.print(f"[bold red]Error:[/] {ve}")
             except httpx.HTTPError as he:
