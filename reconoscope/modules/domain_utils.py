@@ -4,8 +4,11 @@ from typing import Final
 
 import httpx
 from rich.console import Console
-
+from rich.traceback import install
 from reconoscope.core.httpx import httpxretry, make_httpx_client
+
+
+install(show_locals=True)
 
 
 def normalize_hostname(hostname: str) -> str:

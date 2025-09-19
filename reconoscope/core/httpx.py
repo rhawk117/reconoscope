@@ -5,6 +5,7 @@
 import dataclasses as dc
 from typing import TypedDict
 
+import httpcore
 import httpx
 
 from reconoscope.core._user_agents import OS, Browser, UserAgentSpec, Versions
@@ -30,6 +31,7 @@ def httpxretry(
             httpx.ProxyError,
             httpx.NetworkError,
             httpx.HTTPStatusError,
+            httpcore.ConnectError,
         ),
     )
 
@@ -44,12 +46,12 @@ class HttpxOptions:
     '''
     Options for configuring the HTTPX AsyncClient.
     '''
-    timeout: int = 10
+    timeout: int = 20
     max_connections: int = 10
     max_keepalive: int = 5
     keep_alive_expiry: int = 15
     connect_timeout: int = 5
-    read_timeout: int = 5
+    read_timeout: int = 10
     http2: bool = True
     follow_redirects: bool = True
     headers: dict[str, str] = dc.field(default_factory=dict)

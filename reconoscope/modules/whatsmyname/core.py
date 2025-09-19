@@ -63,12 +63,12 @@ async def fetch_one(
 
     negative_id = site.entry.m_string or ''
     positive_id = site.entry.e_string or ''
-
     request_template = WmnSiteUtils.get_request_parts(
         site=site,
         account=username,
         base_headers=base_headers
     )
+    log.info(f'Using template {request_template.method} | {request_template.url}')
 
     async with request_template.stream(client) as response:
         status = response.status_code
@@ -78,11 +78,15 @@ async def fetch_one(
         if status != expected_status:
             return None
 
-        saw_positive, saw_negative = await HTTPStreamUtils.stream_contains(
-            response,
-            must_contain=positive_id,
-            must_not_contain=negative_id,
-        )
+        try:
+            saw_positive, saw_negative = await HTTPStreamUtils.stream_contains(
+                response,
+                must_contain=positive_id,
+                must_not_contain=negative_id,
+            )
+        except (httpx.ReadTimeout, httpx.TransportError):
+            log.warning('Timeout or transport errorm, tring again')
+            raise
 
     if saw_negative and negative_id:
         return None
@@ -128,7 +132,7 @@ class _ChunkProber:
                             log.info(f'Found account on {hit.site}: {hit.url}')
                             hits.append(hit)
                 except Exception as exc:
-                    log.error(f'Error checking {site.entry.name}, {exc}')
+                    log.error(f'Error fetching site {site.entry.name}: {exc}')
 
             tasks = [asyncio.create_task(run_one(site)) for site in chunk]
             if tasks:
@@ -167,13 +171,13 @@ class _UserUtils:
     def client_config(concurrency: int, headers: dict) -> HttpxOptions:
         keep_alive = max(2, concurrency // 2)
         return HttpxOptions(
-            timeout=15,
+            timeout=20,
             max_connections=concurrency,
             max_keepalive=keep_alive,
             keep_alive_expiry=10,
             connect_timeout=10,
-            read_timeout=10,
-            http2=True,
+            read_timeout=30,
+            http2=False,
             follow_redirects=True,
             headers=headers,
         )
@@ -186,7 +190,7 @@ class WhatsMyNameOptions:
     categories: list[str] = dc.field(default_factory=list)
     processes: int = 4
     chunk_size: int = 100
-    concurrency_per_process: int = 50
+    concurrency_per_process: int = 100
 
 
 async def load_wmn_collection(
@@ -240,7 +244,7 @@ async def check_whatsmyusername_multiprocess(
         concurrency=concurrency_per_process,
         headers=headers,
     )
-    logger.debug(f'Using client config: {dc.asdict(config)}')
+    log.debug(f'Using client config: {dc.asdict(config)}')
     all_hits: list[WMNHit] = []
     event_loop = asyncio.get_running_loop()
 
@@ -259,17 +263,19 @@ async def check_whatsmyusername_multiprocess(
                     headers,
                 )
             )
-
+        log.info('Submitted all chunks to process pool, awaiting results...')
         for fut in asyncio.as_completed(futures):
             try:
                 hits = await fut
                 if not hits:
-                    logger.warning('No hits found in chunk.')
+                    logger.warning(
+                        f'No hits found in chunk (sites_per_chunk={chunk_size}).'
+                    )
                     continue
 
                 all_hits.extend(hits)
             except Exception as exc:
-                logger.error(f'Error in process pool worker: {exc}')
+                log.error(f'Error in process pool worker: {exc}')
 
     return all_hits
 
@@ -358,13 +364,10 @@ def _setup_log() -> None:
         '<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - '
         '<level>{message}</level>'
     )
-
-
-
     logger.add(
         sys.stdout,
         format=LOGURU_FORMAT,
-        level='INFO',
+        level='DEBUG',
         colorize=True,
         backtrace=True,
         diagnose=True,

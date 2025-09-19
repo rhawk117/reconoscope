@@ -1,32 +1,33 @@
 
 from __future__ import annotations
-from typing import cast
+
 import functools
-from typing import Any
+from typing import Any, cast
 
 import dns.rdata
 import dns.rdatatype
-from dns.rdtypes.IN.A import A as R_A
-from dns.rdtypes.IN.AAAA import AAAA as R_AAAA
+import dns.resolver
+from dns.rdtypes.ANY.CNAME import CNAME as R_CNAME
 from dns.rdtypes.ANY.MX import MX as R_MX
 from dns.rdtypes.ANY.NS import NS as R_NS
-from dns.rdtypes.ANY.CNAME import CNAME as R_CNAME
+from dns.rdtypes.ANY.PTR import PTR as R_PTR
 from dns.rdtypes.ANY.SOA import SOA as R_SOA
 from dns.rdtypes.ANY.TXT import TXT as R_TXT
-from dns.rdtypes.ANY.PTR import PTR as R_PTR
+from dns.rdtypes.IN.A import A as R_A
+from dns.rdtypes.IN.AAAA import AAAA as R_AAAA
 
-import dns.resolver
 from reconoscope.modules.dns_search.records import (
-    ARecord,
     AAAARecord,
+    ARecord,
     CNAMERecord,
+    DomainRecords,
     MXRecord,
     NSRecord,
+    PTRRecord,
     SOARecord,
     TXTRecord,
-    DomainRecords,
-    PTRRecord,
 )
+
 
 def _name(n: Any) -> str:
     return "" if n is None else str(n).rstrip(".")

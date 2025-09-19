@@ -9,6 +9,8 @@ import dataclasses as dc
 import json
 import logging
 from typing import Final, NamedTuple
+import urllib
+import urllib.parse
 
 import httpx
 
@@ -72,8 +74,9 @@ class WmnSiteUtils:
     @staticmethod
     def get_site_url(site: WhatsMyNameSite, account: str) -> str:
         safe_accountname = _SanitizationUtils.sanitize_accountname(site, account)
+        encoded = urllib.parse.quote(safe_accountname, safe='')
         return _SanitizationUtils.replace_account_placeholder(
-            site.entry.uri_check, safe_accountname
+            site.entry.uri_check, encoded
         )
 
     @staticmethod
@@ -94,10 +97,10 @@ class WmnSiteUtils:
         if not site.options.uri_pretty:
             return None
         safe_accountname = _SanitizationUtils.sanitize_accountname(site, account)
+        encoded = urllib.parse.quote(safe_accountname, safe='')
         return _SanitizationUtils.replace_account_placeholder(
-            site.options.uri_pretty, safe_accountname
+            site.entry.uri_check, encoded
         )
-
     @staticmethod
     def get_site_body(site: WhatsMyNameSite, account: str) -> str | None:
         """
@@ -238,6 +241,8 @@ class WmnSiteUtils:
 
 
 class HTTPStreamUtils:
+    _MB_IN_BYTES: Final[int] = 1_048_576
+
     @staticmethod
     def encode_nullable(s: str | None) -> bytes:
         return s.encode('utf-8') if s else b''
@@ -299,7 +304,7 @@ class HTTPStreamUtils:
         tail = b''
         total_read = 0
 
-        max_bytes = max_size_mb * 1_048_576
+        max_bytes = max_size_mb * HTTPStreamUtils._MB_IN_BYTES
         async for chunk in response.aiter_bytes(chunk_size=chunk_size):
             total_read += len(chunk)
             if total_read > max_bytes:
@@ -313,8 +318,11 @@ class HTTPStreamUtils:
                 seen_negative_identifier = True
 
             if need_negative and seen_negative_identifier:
+                await response.aclose()
                 return (seen_positive_identifier, seen_negative_identifier)
+
             if need_positive and seen_positive_identifier and not need_negative:
+                await response.aclose()
                 return (True, False)
 
             tail = buffer[-overlap_boundary:] if overlap_boundary > 0 else b''
