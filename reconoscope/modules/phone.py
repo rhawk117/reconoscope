@@ -1,9 +1,10 @@
 import asyncio
-import phonenumbers
-from phonenumbers import geocoder
-from phonenumbers import carrier
-
 import dataclasses as dc
+
+import phonenumbers
+from phonenumbers import carrier, geocoder
+from rich import console
+
 
 @dc.dataclass
 class PhoneRecord:
@@ -50,3 +51,26 @@ async def lookup_phone_numbers(phone_numbers: list[str]) -> list[PhoneRecord]:
         for number in phone_numbers
     )
     return await asyncio.gather(*tasks)
+
+
+def auto_run_look() -> None:
+    import sys
+
+    if len(sys.argv) != 1:
+        thanks = console.Console()
+        phone_numbers = thanks.input(
+            "[bold yellow]Enter one or more phone numbers to look up (comma-separated): [/]"
+        )
+    else:
+        phone_numbers = sys.argv[1]
+
+
+    results = get_phone_info(phone_numbers)
+    print(
+        f"Phone Number: {results.phone_number}\n"
+        f"Valid: {results.is_valid}\n"
+        f"E164: {results.e164}\n"
+        f"Country: {results.country}\n"
+        f"Region: {results.region}\n"
+        f"Operator: {results.operator}\n"
+    )
