@@ -74,3 +74,10 @@ def auto_run_look() -> None:
         f"Region: {results.region}\n"
         f"Operator: {results.operator}\n"
     )
+
+def main() -> None:
+    auto_run_look()
+
+
+if __name__ == "__main__":
+    main()
